@@ -27,6 +27,12 @@ require_once "includes.php";
 		<div>Then, apply patches:</div>
 		<textarea name="patches" placeholder="Gerrit changeset number or Change-Id, one per line" rows="4" cols="50"></textarea>
 	</label>
+	<label>
+		<div>Site config:<br/>All keys will be given a <code>$wg</code> prefix.<br/>This file will be <strong>public</strong>.</div>
+		<textarea name="siteConfig" placeholder="{
+  &quot;Sitename&quot;: &quot;Test wiki&quot;
+}" rows="4" cols="50"></textarea>
+	</label>
 	<button type="submit">Create demo</button>
 </form>
 <br/>
@@ -82,6 +88,8 @@ if ( $user ) {
 				}
 				$creator = get_creator( $dir );
 				$created = get_created( $dir );
+				$siteConfig = get_if_file_exists( 'wikis/' . $dir . '/w/config.json' );
+				$hasConfig = $siteConfig && strlen( trim( $siteConfig ) );
 
 				if ( !$created ) {
 					// Add created.txt to old wikis
@@ -94,7 +102,8 @@ if ( $user ) {
 				$wikis[ $dir ] = [
 					'mtime' => $created,
 					'title' => $title,
-					'creator' => $creator
+					'creator' => $creator,
+					'hasConfig' => $hasConfig,
 				];
 			}
 		}
@@ -115,6 +124,12 @@ if ( $user ) {
 		$anyCanDelete = $anyCanDelete || $canDelete;
 		$rows .= '<tr' . ( $creator !== $username ? ' class="other"' : '' ) . '>' .
 			'<td class="title">' . $title . '</td>' .
+			'<td>' .
+				( $data[ 'hasConfig' ] ?
+					'<a href="wikis/' . $wiki . '/w/config.json">JSON</a>' :
+					''
+				) .
+			'</td>' .
 			'<td><a href="wikis/' . $wiki . '/w">' . $wiki . '</a></td>' .
 			'<td>' . date( 'c', $data[ 'mtime' ] ) . '</td>' .
 			( $useOAuth ? '<td>' . ( $creator ? user_link( $creator ) : '?' ) . '</td>' : '' ) .
@@ -127,6 +142,7 @@ if ( $user ) {
 
 	echo '<tr>' .
 			'<th>Patches</th>' .
+			'<th>Config</th>' .
 			'<th>Link</th>' .
 			'<th>Time</th>' .
 			( $useOAuth ? '<th>Creator</th>' : '' ) .
