@@ -1,45 +1,85 @@
 <?php
 require_once "includes.php";
+
+$gitcmd = "git --git-dir=" . __DIR__ . "/repositories/mediawiki/core/.git";
+// basically `git branch -r`, but without the silly parts
+$branches = explode( "\n", shell_exec( "$gitcmd for-each-ref refs/remotes/origin/ --format='%(refname:short)'" ) );
+
+$branches = array_filter( $branches, function ( $branch ) {
+	return preg_match( '/^origin\/(master|wmf|REL)/', $branch );
+} );
+natcasesort( $branches );
+
+// Put newest branches first
+$branches = array_reverse( array_values( $branches ) );
+
+// Move master to the top
+array_unshift( $branches, array_pop( $branches ) );
+
+$branches = array_map( function ( $branch ) {
+	return [ 'data' => $branch ];
+}, $branches );
+
+echo new OOUI\FormLayout( [
+	'infusable' => true,
+	'method' => 'POST',
+	'action' => 'new.php',
+	'id' => 'new-form',
+	'items' => [
+		new OOUI\FieldsetLayout( [
+			'label' => null,
+			'items' => [
+				new OOUI\FieldLayout(
+					new OOUI\DropdownInputWidget( [
+						'name' => 'branch',
+						'options' => $branches,
+					] ),
+					[
+						'label' => 'Start with version:',
+						'align' => 'left',
+					]
+				),
+				new OOUI\FieldLayout(
+					new OOUI\MultilineTextInputWidget( [
+						'name' => 'patches',
+						'placeholder' => 'Gerrit changeset number or Change-Id, one per line',
+						'rows' => 4,
+					] ),
+					[
+						'label' => 'Then, apply patches:',
+						'align' => 'left',
+					]
+				),
+				new OOUI\FieldLayout(
+					new OOUI\ButtonInputWidget( [
+						'label' => 'Create demo',
+						'type' => 'submit',
+						// 'disabled' => true,
+						'flags' => [ 'progressive', 'primary' ]
+					] ),
+					[
+						'label' => ' ',
+						'align' => 'left',
+					]
+				),
+			]
+		] ),
+	]
+] );
 ?>
-<form action="new.php" method="POST" id="new-form">
-	<label>
-		<div>Start with version:</div>
-		<select name="branch">
-		<?php
-
-		$gitcmd = "git --git-dir=" . __DIR__ . "/repositories/mediawiki/core/.git";
-		// basically `git branch -r`, but without the silly parts
-		$branches = explode( "\n", shell_exec( "$gitcmd for-each-ref refs/remotes/origin/ --format='%(refname:short)'" ) );
-
-		$branches = array_filter( $branches, function ( $branch ) {
-			return preg_match( '/^origin\/(master|wmf|REL)/', $branch );
-		} );
-		natcasesort( $branches );
-
-		// Put newest branches first
-		$branches = array_reverse( array_values( $branches ) );
-
-		// Move master to the top
-		array_unshift( $branches, array_pop( $branches ) );
-
-		foreach ( $branches as $branch ) {
-			echo "<option>" . htmlspecialchars( $branch ) . "</option>\n";
-		}
-
-		?>
-		</select>
-	</label>
-	<label>
-		<div>Then, apply patches:</div>
-		<textarea name="patches" placeholder="Gerrit changeset number or Change-Id, one per line" rows="4" cols="50"></textarea>
-	</label>
-	<button type="submit">Create demo</button>
-</form>
 <br/>
 <h3>Previously generated wikis</h3>
 <?php
 if ( $user ) {
-	echo '<label><input type="checkbox" class="myWikis"><span> Show only my wikis</span></label>';
+	echo new OOUI\FieldLayout(
+		new OOUI\CheckboxInputWidget( [
+			'classes' => [ 'myWikis' ]
+		] ),
+		[
+			'align' => 'inline',
+			'label' => 'Show only my wikis',
+		]
+	);
 }
 ?>
 <table class="wikis">
